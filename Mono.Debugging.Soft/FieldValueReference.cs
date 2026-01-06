@@ -1,22 +1,22 @@
-// 
+//
 // FieldValueReference.cs
-//  
+//
 // Authors: Lluis Sanchez Gual <lluis@novell.com>
 //          Jeffrey Stedfast <jeff@xamarin.com>
-// 
+//
 // Copyright (c) 2009 Novell, Inc (http://www.novell.com)
 // Copyright (c) 2012 Xamarin Inc. (http://www.xamarin.com)
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -37,21 +37,21 @@ namespace Mono.Debugging.Soft
 {
 	public class FieldValueReference: SoftValueReference
 	{
-		FieldInfoMirror field;
+		FieldInfoMirror _field;
 		object obj;
 		TypeMirror declaringType;
 		ObjectValueFlags flags;
 		string vname;
 		FieldReferenceBatch batch;
-		
+
 		public FieldValueReference (EvaluationContext ctx, FieldInfoMirror field, object obj, TypeMirror declaringType, FieldReferenceBatch batch = null)
 			: this (ctx, field, obj, declaringType, null, ObjectValueFlags.Field, batch)
 		{
 		}
-		
+
 		public FieldValueReference (EvaluationContext ctx, FieldInfoMirror field, object obj, TypeMirror declaringType, string vname, ObjectValueFlags vflags, FieldReferenceBatch batch = null): base (ctx)
 		{
-			this.field = field;
+			_field = field;
 			this.obj = obj;
 			this.declaringType = declaringType;
 			this.vname = vname;
@@ -96,7 +96,7 @@ namespace Mono.Debugging.Soft
 
 			return flags;
 		}
-		
+
 		public override ObjectValueFlags Flags {
 			get {
 				return flags;
@@ -105,19 +105,19 @@ namespace Mono.Debugging.Soft
 
 		public override string Name {
 			get {
-				return vname ?? field.Name;
+				return vname ?? _field.Name;
 			}
 		}
 
 		public override object Type {
 			get {
-				return field.FieldType;
+				return _field.FieldType;
 			}
 		}
-		
+
 		public override object DeclaringType {
 			get {
-				return field.DeclaringType;
+				return _field.DeclaringType;
 			}
 		}
 
@@ -127,17 +127,17 @@ namespace Mono.Debugging.Soft
 					// If the type hasn't already been loaded, invoke the .cctor() for types w/ the BeforeFieldInit attribute.
 					Context.Adapter.ForceLoadType (Context, declaringType);
 
-					return declaringType.GetValue (field, ((SoftEvaluationContext)Context).Thread);
+					return declaringType.GetValue (_field, ((SoftEvaluationContext)Context).Thread);
 				} else if (obj is ObjectMirror) {
 					if (batch != null)
-						return batch.GetValue (field);
-					return ((ObjectMirror)obj).GetValue (field);
+						return batch.GetValue (_field);
+					return ((ObjectMirror)obj).GetValue (_field);
 				} else if (obj is StructMirror) {
 					StructMirror sm = (StructMirror)obj;
 					int idx = 0;
 					foreach (FieldInfoMirror f in sm.Type.GetFields ()) {
 						if (f.IsStatic) continue;
-						if (f == field)
+						if (f == _field)
 							break;
 						idx++;
 					}
@@ -145,31 +145,31 @@ namespace Mono.Debugging.Soft
 				} else if (obj is StringMirror) {
 					SoftEvaluationContext cx = (SoftEvaluationContext) Context;
 					StringMirror val = (StringMirror) obj;
-					FieldInfo rfield = typeof(string).GetField (field.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+					FieldInfo rfield = typeof(string).GetField (_field.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 					return cx.Session.VirtualMachine.CreateValue (rfield.GetValue (val.Value));
 				} else {
 					SoftEvaluationContext cx = (SoftEvaluationContext) Context;
 					PrimitiveValue val = (PrimitiveValue) obj;
 					if (val.Value == null)
 						return null;
-					FieldInfo rfield = val.Value.GetType ().GetField (field.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+					FieldInfo rfield = val.Value.GetType ().GetField (_field.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 					return cx.Session.VirtualMachine.CreateValue (rfield.GetValue (val.Value));
 				}
 			}
 			set {
 				if (obj == null)
-					declaringType.SetValue (field, (Value)value);
+					declaringType.SetValue (_field, (Value)value);
 				else if (obj is ObjectMirror) {
 					if (batch != null)
 						batch.Invalidate ();
-					((ObjectMirror)obj).SetValue (field, (Value)value);
+					((ObjectMirror)obj).SetValue (_field, (Value)value);
 				}
 				else if (obj is StructMirror) {
 					StructMirror sm = (StructMirror)obj;
 					int idx = 0;
 					foreach (FieldInfoMirror f in sm.Type.GetFields ()) {
 						if (f.IsStatic) continue;
-						if (f == field)
+						if (f == _field)
 							break;
 						idx++;
 					}
@@ -187,7 +187,7 @@ namespace Mono.Debugging.Soft
 
 		internal string [] GetTupleElementNames ()
 		{
-			return GetTupleElementNames (field.GetCustomAttributes (true));
+			return GetTupleElementNames (_field.GetCustomAttributes (true));
 		}
 
 		internal static string [] GetTupleElementNames (CustomAttributeDataMirror [] attrs)
